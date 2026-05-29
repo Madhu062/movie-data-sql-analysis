@@ -1,1 +1,148 @@
+# movie-data-sql-analysis
+___________________________________________________________________________________________________________________________________________________________________
+Basic Filtering 
 
+# Find all movies released after 2015 with an IMDb rating greater than 7.5. Return the movie title, release year, and IMDb rating.
+
+SELECT 
+  Title,
+  ReleaseYear,
+  IMDbRating
+FROM movie_data
+WHERE ReleaseYear > 2015
+  AND IMDbRating > 7.5
+ORDER BY IMDbRating DESC;
+___________________________________________________________________________________________________________________________________________________________________
+Profitablity Analysis 
+
+# Find the top 10 highest grossing movies globally released after 2010 where the budget was greater than 5 million USD and the IMDb rating was greater than 7.
+
+SELECT 
+  Title,
+  Global_BoxOfficeUSD,
+  BudgetUSD,
+  (Global_BoxOfficeUSD - BudgetUSD) AS Profit
+FROM movie_data
+WHERE BudgetUSD > 5000000
+  AND ReleaseYear > 2010
+  AND IMDbRating > 7
+ORDER BY Global_BoxOfficeUSD DESC
+LIMIT 10;
+___________________________________________________________________________________________________________________________________________________________________
+Genre Analysis
+
+# Top profitable Genre's
+
+SELECT 
+  Genre,
+  AVG(Global_BoxOfficeUSD - BudgetUSD) AS Avg_Profit,
+  COUNT(*) AS Movie_Count
+FROM movie_data
+GROUP BY Genre
+HAVING COUNT(*) >= 5
+ORDER BY Avg_Profit DESC
+LIMIT 3;
+
+# Advanced genre analysis
+
+WITH genre_stats AS (
+    SELECT 
+        Genre,
+        AVG(IMDbRating) AS Avg_Rating,
+        SUM(Global_BoxOfficeUSD) AS Total_Revenue
+    FROM movie_data
+    GROUP BY Genre
+)
+
+SELECT
+    Genre,
+    Avg_Rating,
+    Total_Revenue,
+    RANK() OVER (ORDER BY Total_Revenue DESC) AS Revenue_Rank
+FROM genre_stats
+WHERE Avg_Rating > (
+    SELECT AVG(IMDbRating)
+    FROM movie_data
+)
+___________________________________________________________________________________________________________________________________________________________________
+Director Analysis
+
+# Find the best directors in terms of ratings consistency. Only include directors who have directed at least 5 movies.
+
+SELECT 
+  Director,
+  COUNT(*) AS Movie_Count,
+  AVG(IMDbRating) AS Avg_Rating,
+  MAX(IMDbRating) AS Max_Rating,
+  MIN(IMDbRating) AS Min_Rating
+FROM movie_data
+GROUP BY Director
+HAVING COUNT(*) >= 5
+ORDER BY Avg_Rating DESC;
+
+# Find directors whose movies are the most consistent in ratings. Only include directors with at least 5 movies. 
+
+SELECT 
+  Director,
+  COUNT(*) AS Movie_Count,
+  AVG(IMDbRating) AS Avg_Rating,
+  MAX(IMDbRating) AS Max_Rating,
+  MIN(IMDbRating) AS Min_Rating,
+  (MAX(IMDbRating) - MIN(IMDbRating)) AS Consistency
+FROM movie_data
+GROUP BY Director
+HAVING COUNT(*) >= 5
+ORDER BY Consistency ASC;
+___________________________________________________________________________________________________________________________________________________________________
+Window Functions
+
+# Assign a rank to movies based on Global_BoxOfficeUSD.
+
+SELECT 
+  Title,
+  Global_BoxOfficeUSD,
+  RANK() OVER (
+    ORDER BY Global_BoxOfficeUSD DESC
+  ) AS movie_rank
+FROM movie_data;
+
+# For each country, find the top 3 highest IMDb rated movies.
+
+WITH ranked_movies AS (
+  SELECT 
+    Country,
+    Title,
+    IMDbRating,
+    RANK() OVER (
+      PARTITION BY Country 
+      ORDER BY IMDbRating DESC
+    ) AS movie_rank
+  FROM movie_data
+)
+
+SELECT *
+FROM ranked_movies
+WHERE movie_rank <= 3;
+
+# Find the second highest grossing movie in each genre.
+
+WITH ranked_movies AS (
+    SELECT 
+        Genre,
+        Title,
+        Global_BoxOfficeUSD,
+        ROW_NUMBER() OVER (
+            PARTITION BY Genre 
+            ORDER BY Global_BoxOfficeUSD DESC
+        ) AS movie_rank
+    FROM movie_data
+)
+
+SELECT 
+    Genre,
+    Title,
+    Global_BoxOfficeUSD
+FROM ranked_movies
+WHERE movie_rank = 2;
+AND Total_Revenue > 50000000;
+_________________________________________________________________________________________________________________________________
