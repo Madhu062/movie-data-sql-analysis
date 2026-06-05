@@ -31,7 +31,7 @@ LIMIT 10;
 ___________________________________________________________________________________________________________________________________________________________________
 Genre Analysis
 
-# Top profitable Genre's
+# Find the top 3 genres by average profit, including only genres with at least 5 movies
 
 SELECT 
   Genre,
@@ -43,7 +43,7 @@ HAVING COUNT(*) >= 5
 ORDER BY Avg_Profit DESC
 LIMIT 3;
 
-# Advanced genre analysis
+# Find genres with an average IMDb rating above the overall average and total global revenue over $5 billion
 
 WITH genre_stats AS (
     SELECT 
@@ -64,6 +64,8 @@ WHERE Avg_Rating > (
     SELECT AVG(IMDbRating)
     FROM movie_data
 )
+AND Total_Revenue > 5000000;
+
 ___________________________________________________________________________________________________________________________________________________________________
 Director Analysis
 
